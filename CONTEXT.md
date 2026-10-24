@@ -192,15 +192,26 @@ A milestone from BLUEPRINT section 11 is done only when:
 
 > Update this section at the end of every session so the next session starts in the right place.
 
-- **Current milestone:** M0 done. Starting M1 (Doctors) next.
-- **Done so far:** Maven project scaffolded by hand (no internet Initializr used — `pom.xml` written
-  directly with Spring Web, Data JPA, Validation, `spring-boot-starter-aspectj`, MySQL driver).
-  Added Maven Wrapper (`mvnw`/`mvnw.cmd`) since no system Maven was installed. `ClinicProperties`
-  binds `application.properties`; `dev`/`prod` profiles added; `queueless_dev` DB created in local
-  MySQL; `ClinicPropertiesPrinter` (`CommandLineRunner`, `@Profile("dev")`) confirmed every value
-  loads correctly on startup. DB password is read from `${DB_PASSWORD}` env var, not committed in
-  plaintext (this repo is going public on GitHub/LinkedIn).
-- **Next step:** M1 — Doctor entity, DTOs, validation, service, controller, soft delete (D1–D5).
+- **Current milestone:** M1 done. Starting M2 (GlobalExceptionHandler + BusinessException family) next.
+- **Done so far:**
+  - M0: Maven project scaffolded by hand (no internet Initializr used — `pom.xml` written directly
+    with Spring Web, Data JPA, Validation, `spring-boot-starter-aspectj`, MySQL driver). Added Maven
+    Wrapper (`mvnw`/`mvnw.cmd`) since no system Maven was installed. `ClinicProperties` binds
+    `application.properties`; `dev`/`prod` profiles added; `queueless_dev` DB created in local MySQL;
+    `ClinicPropertiesPrinter` confirmed every value loads on startup. DB password is read from
+    `${DB_PASSWORD}` env var, not committed in plaintext (this repo is going public).
+  - M1: `Doctor` entity, `DoctorRepository`, `CreateDoctorRequest`/`UpdateDoctorRequest`,
+    `DoctorResponse`, `DoctorService`, `DoctorController`. All 5 endpoints manually tested with
+    curl: bad email -> 400, create -> 201, duplicate email -> 409 (D2), list/get -> 200, missing id
+    -> 404, update -> 200, deactivate -> 204 then doctor disappears from list and 404s on GET (D3,
+    D5). **D4 is deliberately NOT enforced yet** — left as a `// TODO: D4` in
+    `DoctorService.deactivate()` — it needs `AppointmentRepository`, which doesn't exist until
+    M5/M6. Revisit then. 409/404 currently thrown via plain `ResponseStatusException`, not the
+    blueprint's custom error JSON shape — that's M2's job.
+- **Next step:** M2 — `BusinessException` family + `GlobalExceptionHandler`, producing the error
+  contract from BLUEPRINT.md section 5 (`code`, `requestId`, `fieldErrors`). Then swap
+  `DoctorService`'s `ResponseStatusException`s over to it. Per CONTEXT.md 3.2, this is a
+  "write-it-yourself-first" part (I-drive mode), unless told otherwise.
 - **Open questions / confusions:** none yet
 
 ---
