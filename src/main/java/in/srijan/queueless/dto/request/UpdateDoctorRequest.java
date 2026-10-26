@@ -16,8 +16,8 @@ public class UpdateDoctorRequest {
     @Pattern(regexp = "\\d{10}", message = "phone must be exactly 10 digits")
     private String phone;
 
-    @NotNull(message = "consultationFee is required")
-    @DecimalMin(value = "0.0", inclusive = false, message = "consultationFee must be positive")
+    @NotNull(message = "Consultation Fee is required")
+    @DecimalMin(value = "0.0", inclusive = false, message = "Consultation Fee must be positive")
     private BigDecimal consultationFee;
 
     public String getName() {

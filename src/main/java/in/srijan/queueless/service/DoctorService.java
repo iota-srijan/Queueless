@@ -4,10 +4,10 @@ import in.srijan.queueless.dto.request.CreateDoctorRequest;
 import in.srijan.queueless.dto.request.UpdateDoctorRequest;
 import in.srijan.queueless.dto.response.DoctorResponse;
 import in.srijan.queueless.entity.Doctor;
+import in.srijan.queueless.exception.ConflictException;
+import in.srijan.queueless.exception.ResourceNotFoundException;
 import in.srijan.queueless.repository.DoctorRepository;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -23,7 +23,7 @@ public class DoctorService {
     public DoctorResponse create(CreateDoctorRequest request) {
         // D2: duplicate email -> 409
         if (doctorRepository.existsByEmail(request.getEmail())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
+            throw new ConflictException("DUPLICATE_EMAIL",
                     "A doctor with email " + request.getEmail() + " already exists");
         }
 
@@ -51,15 +51,13 @@ public class DoctorService {
     public DoctorResponse getById(Long id) {
         // D5: an inactive doctor looks "not found" to everyone
         Doctor doctor = doctorRepository.findByIdAndActiveTrue(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Doctor " + id + " not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor " + id + " not found"));
         return DoctorResponse.from(doctor);
     }
 
     public DoctorResponse update(Long id, UpdateDoctorRequest request) {
         Doctor doctor = doctorRepository.findByIdAndActiveTrue(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Doctor " + id + " not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor " + id + " not found"));
 
         doctor.setName(request.getName());
         doctor.setSpecialization(request.getSpecialization());
@@ -72,8 +70,7 @@ public class DoctorService {
 
     public void deactivate(Long id) {
         Doctor doctor = doctorRepository.findByIdAndActiveTrue(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Doctor " + id + " not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor " + id + " not found"));
 
         // TODO: D4 - once AppointmentRepository exists (M5/M6), block deactivation
         // when existsByDoctorIdAndStatusAndAppointmentDateGreaterThanEqual(id, BOOKED, today)
