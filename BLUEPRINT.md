@@ -529,6 +529,15 @@ Put this section in your README. It shows you know what's missing, and it sets u
 | No automated tests | Rules can silently break | JUnit + Mockito + `@WebMvcTest` (L40) |
 | Reports need complex aggregation | JPA is awkward for reports | Daily no-show / bookings-per-doctor report with `JdbcTemplate` (L27) |
 
+### Discovered flaws (not lecture-scoped)
+
+Found while building, not part of the original design — these aren't tied to a specific lecture,
+just application-design gaps to revisit once v1 (M0–M11) is actually finished.
+
+| Flaw | Why it matters | Plan |
+|---|---|---|
+| No way to correct a mistaken `COMPLETED`/`CANCELLED`/`NO_SHOW` status | `AppointmentStatus.canMoveTo()` treats all three as permanent one-way end states (A5's diagram only has arrows leading *out of* `BOOKED`, none back in or between terminal states) — a doctor's mis-click (e.g. `NO_SHOW` instead of `COMPLETED`) becomes a permanent wrong record with no API-level fix | **Revisit after M11.** Needs a real design decision, not just code — e.g. a receptionist-only "correct status" override endpoint that bypasses `canMoveTo`, with its own audit trail once M10 exists |
+
 ---
 
 ## 14. LinkedIn demo script (60–90 s screen recording)

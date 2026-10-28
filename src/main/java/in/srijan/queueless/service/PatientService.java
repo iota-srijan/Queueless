@@ -1,20 +1,44 @@
 package in.srijan.queueless.service;
 
 import in.srijan.queueless.dto.request.RegisterPatientRequest;
+import in.srijan.queueless.dto.response.AppointmentResponse;
 import in.srijan.queueless.dto.response.PatientResponse;
+import in.srijan.queueless.entity.Appointment;
+import in.srijan.queueless.entity.Doctor;
 import in.srijan.queueless.entity.Patient;
 import in.srijan.queueless.exception.ConflictException;
+import in.srijan.queueless.exception.ForbiddenException;
 import in.srijan.queueless.exception.ResourceNotFoundException;
+import in.srijan.queueless.repository.AppointmentRepository;
+import in.srijan.queueless.repository.DoctorRepository;
 import in.srijan.queueless.repository.PatientRepository;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class PatientService {
 
     private final PatientRepository patientRepository;
+    private final AppointmentRepository appointmentRepository;
+    private final DoctorRepository doctorRepository;
 
-    public PatientService(PatientRepository patientRepository) {
+    public PatientService(PatientRepository patientRepository,
+                           AppointmentRepository appointmentRepository,
+                           DoctorRepository doctorRepository) {
         this.patientRepository = patientRepository;
+        this.appointmentRepository = appointmentRepository;
+        this.doctorRepository = doctorRepository;
+    }
+
+    // P2: patient reads own profile only, receptionist reads any
+    private void checkOwnerOrReceptionist(Long id, String callerRole, Long callerId) {
+        boolean isReceptionist = "RECEPTIONIST".equals(callerRole);
+        boolean isSelf = "PATIENT".equals(callerRole) && id.equals(callerId);
+        if (!isReceptionist && !isSelf) {
+            throw new ForbiddenException("NOT_YOUR_RESOURCE",
+                    "You may only access your own patient record");
+        }
     }
 
     public PatientResponse register(RegisterPatientRequest request) {
@@ -34,13 +58,35 @@ public class PatientService {
         return PatientResponse.from(saved);
     }
 
-    public PatientResponse getById(Long id) {
-        // TODO: P2 - once CurrentRequest/RoleInterceptor exist (M9), only the
-        // patient themselves or a RECEPTIONIST may read this; throw 403
-        // NOT_YOUR_RESOURCE otherwise. Open to everyone until then.
+    public PatientResponse getById(Long id, String callerRole, Long callerId) {
+        checkOwnerOrReceptionist(id, callerRole, callerId);
 
         Patient patient = patientRepository.findByIdAndDeletedFalse(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Patient " + id + " not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Patient " + id + " not found"));
         return PatientResponse.from(patient);
+    }
+
+    // P2: same ownership rule as getById
+    public List<AppointmentResponse> getAppointments(Long id, String callerRole, Long callerId) {
+        checkOwnerOrReceptionist(id, callerRole, callerId);
+
+        patientRepository.findByIdAndDeletedFalse(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Patient " + id + " not found"));
+
+        List<Appointment> appointments =
+                appointmentRepository.findByPatientIdOrderByAppointmentDateDescStartTimeDesc(id);
+
+        // N+1 here: one doctor lookup per appointment. Known v1 limitation (BLUEPRINT §13) -
+        // fixed properly by @ManyToOne/@EntityGraph in v2 (M12).
+        return appointments.stream()
+                .map(appointment -> {
+                    Doctor doctor = doctorRepository.findById(appointment.getDoctorId())
+                            .orElseThrow(() -> new ResourceNotFoundException(
+                                    "Doctor " + appointment.getDoctorId() + " not found"));
+                    return AppointmentResponse.from(appointment, doctor);
+                })
+                .toList();
     }
 }

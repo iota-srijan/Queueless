@@ -4,20 +4,25 @@ import in.srijan.queueless.dto.request.CreateDoctorRequest;
 import in.srijan.queueless.dto.request.UpdateDoctorRequest;
 import in.srijan.queueless.dto.response.DoctorResponse;
 import in.srijan.queueless.entity.Doctor;
+import in.srijan.queueless.enums.AppointmentStatus;
 import in.srijan.queueless.exception.ConflictException;
 import in.srijan.queueless.exception.ResourceNotFoundException;
+import in.srijan.queueless.repository.AppointmentRepository;
 import in.srijan.queueless.repository.DoctorRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
 public class DoctorService {
 
     private final DoctorRepository doctorRepository;
+    private final AppointmentRepository appointmentRepository;
 
-    public DoctorService(DoctorRepository doctorRepository) {
+    public DoctorService(DoctorRepository doctorRepository, AppointmentRepository appointmentRepository) {
         this.doctorRepository = doctorRepository;
+        this.appointmentRepository = appointmentRepository;
     }
 
     public DoctorResponse create(CreateDoctorRequest request) {
@@ -72,9 +77,12 @@ public class DoctorService {
         Doctor doctor = doctorRepository.findByIdAndActiveTrue(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor " + id + " not found"));
 
-        // TODO: D4 - once AppointmentRepository exists (M5/M6), block deactivation
-        // when existsByDoctorIdAndStatusAndAppointmentDateGreaterThanEqual(id, BOOKED, today)
-        // is true, throwing 409 DOCTOR_HAS_UPCOMING_APPOINTMENTS.
+        // D4: can't deactivate a doctor with a future BOOKED appointment
+        if (appointmentRepository.existsByDoctorIdAndStatusAndAppointmentDateGreaterThanEqual(
+                id, AppointmentStatus.BOOKED, LocalDate.now())) {
+            throw new ConflictException("DOCTOR_HAS_UPCOMING_APPOINTMENTS",
+                    "Doctor " + id + " has upcoming appointments and cannot be deactivated");
+        }
 
         // D3: soft delete only
         doctor.setActive(false);

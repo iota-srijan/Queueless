@@ -1,12 +1,15 @@
 package in.srijan.queueless.controller;
 
 import in.srijan.queueless.dto.request.RegisterPatientRequest;
+import in.srijan.queueless.dto.response.AppointmentResponse;
 import in.srijan.queueless.dto.response.PatientResponse;
 import in.srijan.queueless.service.PatientService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/patients")
@@ -25,7 +28,18 @@ public class PatientController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PatientResponse> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(patientService.getById(id));
+    public ResponseEntity<PatientResponse> getById(
+            @PathVariable Long id,
+            @RequestHeader("x-user-role") String callerRole,
+            @RequestHeader("x-user-id") Long callerId) {
+        return ResponseEntity.ok(patientService.getById(id, callerRole, callerId));
+    }
+
+    @GetMapping("/{id}/appointments")
+    public ResponseEntity<List<AppointmentResponse>> getAppointments(
+            @PathVariable Long id,
+            @RequestHeader("x-user-role") String callerRole,
+            @RequestHeader("x-user-id") Long callerId) {
+        return ResponseEntity.ok(patientService.getAppointments(id, callerRole, callerId));
     }
 }
