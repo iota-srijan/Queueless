@@ -4,7 +4,7 @@ import jakarta.validation.constraints.*;
 
 import java.time.LocalDate;
 
-public class RegisterPatientRequest {
+public class    RegisterPatientRequest {
 
     @NotBlank(message = "name is required")
     private String name;

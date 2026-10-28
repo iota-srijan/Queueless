@@ -14,6 +14,7 @@ import in.srijan.queueless.exception.ConflictException;
 import in.srijan.queueless.exception.ForbiddenException;
 import in.srijan.queueless.exception.ResourceNotFoundException;
 import in.srijan.queueless.exception.UnprocessableEntityException;
+import in.srijan.queueless.notification.NotificationService;
 import in.srijan.queueless.repository.AppointmentRepository;
 import in.srijan.queueless.repository.DoctorRepository;
 import in.srijan.queueless.repository.PatientRepository;
@@ -31,17 +32,20 @@ public class AppointmentService {
     private final PatientRepository patientRepository;
     private final DoctorRepository doctorRepository;
     private final ClinicProperties clinicProperties;
+    private final NotificationService notificationService;
 
     public AppointmentService(AppointmentRepository appointmentRepository,
                               SlotRepository slotRepository,
                               PatientRepository patientRepository,
                               DoctorRepository doctorRepository,
-                              ClinicProperties clinicProperties) {
+                              ClinicProperties clinicProperties,
+                              NotificationService notificationService) {
         this.appointmentRepository = appointmentRepository;
         this.slotRepository = slotRepository;
         this.patientRepository = patientRepository;
         this.doctorRepository = doctorRepository;
         this.clinicProperties = clinicProperties;
+        this.notificationService = notificationService;
     }
 
     public AppointmentResponse book(
@@ -121,8 +125,8 @@ public class AppointmentService {
         Appointment savedAppointment =
                 appointmentRepository.save(appointment);
 
-
-
+        // A11: notify the patient on booking
+        notificationService.notifyBooked(patient, doctor, savedAppointment);
 
         return AppointmentResponse.from(savedAppointment,
                 doctor,"" +
@@ -187,6 +191,12 @@ public class AppointmentService {
         Doctor doctor = doctorRepository.findByIdAndActiveTrue(appointment.getDoctorId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Doctor " + appointment.getDoctorId() + " not found"));
+
+        // A11: notify the patient on cancellation
+        Patient patient = patientRepository.findByIdAndDeletedFalse(appointment.getPatientId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Patient " + appointment.getPatientId() + " not found"));
+        notificationService.notifyCancelled(patient, doctor, appointment);
 
         return AppointmentResponse.from(appointment, doctor, "Appointment cancelled");
     }
